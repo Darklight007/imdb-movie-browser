@@ -8,7 +8,7 @@ A free, fast, and beautiful web application for searching and exploring movies f
 
 **Created by Homayoun Jamshidi** | [GitHub](https://github.com/Darklight007)
 
-> This project was designed and directed by Homayoun Jamshidi. All features, user experience, and functionality decisions were conceived by the creator. Implementation assisted by Claude Code.
+> A comprehensive movie search and discovery platform with advanced filtering, responsive design, and optimized performance.
 
 ## ✨ Features
 
