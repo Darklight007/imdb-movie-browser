@@ -29,7 +29,12 @@ from typing import Dict, List, Tuple
 app = Flask(__name__)
 
 # Configuration
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'imdb_dataset.db')
+# Check if database is in same directory (production) or parent directory (development)
+DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'imdb_dataset.db')
+if not os.path.exists(DATABASE_PATH):
+    # Try parent directory (for local development)
+    DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'imdb_dataset.db')
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max request size
 
 # ============================================================================
