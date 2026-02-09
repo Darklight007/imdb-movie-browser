@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}About - IMDB Movie Browser{% endblock %}
+
+{% block content %}
+<div class="about-page">
+    <h1>About This Project</h1>
+
+    <section class="about-section">
+        <h2>🎬 IMDB Movie Browser</h2>
+        <p>
+            This is a free, non-commercial movie search and discovery tool built using data from
+            <a href="https://developer.imdb.com/non-commercial-datasets/" target="_blank">IMDB's official datasets</a>.
+        </p>
+        <p>
+            Search and filter through hundreds of thousands of movies by title, year, rating, genre, director, cast, and more.
+        </p>
+    </section>
+
+    <section class="about-section">
+        <h2>📊 Data Source</h2>
+        <p>
+            <strong>Information courtesy of <a href="https://www.imdb.com" target="_blank">IMDb</a>. Used with permission.</strong>
+        </p>
+        <p>
+            All movie data comes from IMDB's Non-Commercial Datasets, which are updated regularly.
+            This includes information about titles, ratings, cast, crew, and more.
+        </p>
+    </section>
+
+    <section class="about-section">
+        <h2>⚖️ License & Usage</h2>
+        <p>
+            This project uses IMDB data under their non-commercial license terms:
+        </p>
+        <ul>
+            <li>✓ Free for personal and non-commercial use</li>
+            <li>✓ Educational purposes</li>
+            <li>✗ No commercial use (ads, subscriptions, etc.)</li>
+            <li>✗ No data redistribution</li>
+        </ul>
+        <p>
+            For commercial licensing, contact IMDB at
+            <a href="mailto:licensing@imdb.com">licensing@imdb.com</a>.
+        </p>
+    </section>
+
+    <section class="about-section">
+        <h2>🛠️ Technology</h2>
+        <p>Built with:</p>
+        <ul>
+            <li><strong>Backend:</strong> Python Flask</li>
+            <li><strong>Database:</strong> SQLite with performance optimizations</li>
+            <li><strong>Frontend:</strong> Vanilla JavaScript, HTML5, CSS3</li>
+            <li><strong>Design:</strong> Responsive, mobile-friendly interface</li>
+        </ul>
+    </section>
+
+    <section class="about-section">
+        <h2>📝 Features</h2>
+        <ul>
+            <li>✓ Search by title, director, cast</li>
+            <li>✓ Filter by year, rating, votes, language, country</li>
+            <li>✓ Multiple genre filtering (AND/OR logic)</li>
+            <li>✓ Sort by rating, votes, year, or title</li>
+            <li>✓ Responsive design for all devices</li>
+            <li>✓ Fast SQLite queries with indexes</li>
+        </ul>
+    </section>
+
+    <section class="about-section">
+        <h2>🔗 External Links</h2>
+        <ul>
+            <li><a href="https://www.imdb.com" target="_blank">IMDB Official Website</a></li>
+            <li><a href="https://developer.imdb.com/non-commercial-datasets/" target="_blank">IMDB Datasets</a></li>
+            <li><a href="https://help.imdb.com/article/imdb/general-information/can-i-use-imdb-data-in-my-software/G5JTRESSHJBBHTGX" target="_blank">IMDB Data Usage Policy</a></li>
+        </ul>
+    </section>
+
+    <div class="about-footer">
+        <a href="/" class="btn btn-primary">← Back to Search</a>
+    </div>
+</div>
+
+<style>
+.about-page {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.about-page h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--secondary-color);
+}
+
+.about-section {
+    margin: 2rem 0;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.about-section:last-of-type {
+    border-bottom: none;
+}
+
+.about-section h2 {
+    margin-bottom: 1rem;
+    color: var(--secondary-color);
+}
+
+.about-section p {
+    margin: 1rem 0;
+    line-height: 1.8;
+}
+
+.about-section ul {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.about-section li {
+    margin: 0.5rem 0;
+}
+
+.about-section a {
+    color: var(--link-color);
+}
+
+.about-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+</style>
+{% endblock %}

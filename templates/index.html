@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>🎬 Movie Database</h1>
+    <p class="hero-subtitle">Search {{ "{:,}".format(total_movies) }} movies from IMDB</p>
+</div>
+
+<div class="search-section">
+    <form id="searchForm" class="search-form">
+        <!-- Title Search -->
+        <div class="form-group">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" placeholder="Search by title..." class="form-control">
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="form-row">
+            <!-- Year Range -->
+            <div class="form-group">
+                <label>Year:</label>
+                <div class="range-inputs">
+                    <input type="number" id="year_from" name="year_from"
+                           min="{{ year_range[0] }}" max="{{ year_range[1] }}"
+                           placeholder="From" class="form-control">
+                    <span>to</span>
+                    <input type="number" id="year_to" name="year_to"
+                           min="{{ year_range[0] }}" max="{{ year_range[1] }}"
+                           placeholder="To" class="form-control">
+                </div>
+            </div>
+
+            <!-- Rating Range -->
+            <div class="form-group">
+                <label>Rating:</label>
+                <div class="range-inputs">
+                    <input type="number" id="rating_min" name="rating_min"
+                           min="0" max="10" step="0.1"
+                           placeholder="Min" class="form-control">
+                    <span>to</span>
+                    <input type="number" id="rating_max" name="rating_max"
+                           min="0" max="10" step="0.1"
+                           placeholder="Max" class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <!-- Director and Cast -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="director">Director:</label>
+                <input type="text" id="director" name="director"
+                       placeholder="e.g., Christopher Nolan" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="cast">Cast:</label>
+                <input type="text" id="cast" name="cast"
+                       placeholder="e.g., Tom Hanks" class="form-control">
+            </div>
+        </div>
+
+        <!-- Language and Country -->
+        {% if has_language or has_country %}
+        <div class="form-row">
+            {% if has_language %}
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language" name="language" class="form-control">
+                    <option value="">(All)</option>
+                    {% for code, name in languages %}
+                    <option value="{{ code }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if has_country %}
+            <div class="form-group">
+                <label for="country">Country:</label>
+                <select id="country" name="country" class="form-control">
+                    <option value="">(All)</option>
+                    {% for code, name in countries %}
+                    <option value="{{ code }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Votes Slider -->
+        <div class="form-group">
+            <label for="votes_min">Minimum Votes: <span id="votesLabel">0</span></label>
+            <input type="range" id="votes_min" name="votes_min"
+                   min="0" max="9" value="0" step="1"
+                   class="slider" oninput="updateVotesLabel(this.value)">
+            <div class="votes-hints">
+                <span>0</span>
+                <span>100</span>
+                <span>1K</span>
+                <span>10K</span>
+                <span>100K</span>
+                <span>1M</span>
+            </div>
+        </div>
+
+        <!-- Genres -->
+        <div class="form-group">
+            <label>Genres:</label>
+            <div class="genre-buttons" id="genreButtons">
+                {% for genre in genres %}
+                <button type="button" class="genre-btn" data-genre="{{ genre }}">{{ genre }}</button>
+                {% endfor %}
+            </div>
+            <div class="genre-mode">
+                <label><input type="radio" name="genre_mode" value="OR" checked> Match ANY</label>
+                <label><input type="radio" name="genre_mode" value="AND"> Match ALL</label>
+            </div>
+        </div>
+
+        <!-- Sorting -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="sort_by">Sort by:</label>
+                <select id="sort_by" name="sort_by" class="form-control">
+                    <option value="rating">Rating</option>
+                    <option value="votes">Votes</option>
+                    <option value="year">Year</option>
+                    <option value="title">Title</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="sort_order">Order:</label>
+                <select id="sort_order" name="sort_order" class="form-control">
+                    <option value="DESC">Descending</option>
+                    <option value="ASC">Ascending</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="limit">Results:</label>
+                <select id="limit" name="limit" class="form-control">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">🔍 Search Movies</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" class="results-section" style="display: none;">
+    <div class="results-header">
+        <h2>Search Results</h2>
+        <p id="resultsCount"></p>
+    </div>
+    <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+        <div class="spinner"></div>
+        <p>Searching movies...</p>
+    </div>
+    <div id="resultsTable"></div>
+</div>
+
+<script>
+// Vote thresholds (same as GUI)
+const voteThresholds = [0, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
+
+function updateVotesLabel(index) {
+    const value = voteThresholds[index];
+    let label;
+    if (value >= 1000000) {
+        label = (value / 1000000) + 'M';
+    } else if (value >= 1000) {
+        label = (value / 1000) + 'K';
+    } else {
+        label = value.toString();
+    }
+    document.getElementById('votesLabel').textContent = label;
+}
+
+// Genre button handling - 3 states: normal, include (+), exclude (-)
+const GENRE_NORMAL = 0;
+const GENRE_INCLUDE = 1;
+const GENRE_EXCLUDE = 2;
+
+let genreStates = new Map(); // genre -> state (0, 1, 2)
+
+document.getElementById('genreButtons').addEventListener('click', function(e) {
+    if (e.target.classList.contains('genre-btn')) {
+        const genre = e.target.dataset.genre;
+        const currentState = genreStates.get(genre) || GENRE_NORMAL;
+
+        // Cycle through states: normal → include → exclude → normal
+        let newState;
+        if (currentState === GENRE_NORMAL) {
+            newState = GENRE_INCLUDE;
+        } else if (currentState === GENRE_INCLUDE) {
+            newState = GENRE_EXCLUDE;
+        } else {
+            newState = GENRE_NORMAL;
+        }
+
+        // Update state
+        genreStates.set(genre, newState);
+
+        // Update button appearance
+        e.target.classList.remove('genre-include', 'genre-exclude');
+        e.target.textContent = genre; // Reset text
+
+        if (newState === GENRE_INCLUDE) {
+            e.target.classList.add('genre-include');
+            e.target.textContent = '+ ' + genre;
+        } else if (newState === GENRE_EXCLUDE) {
+            e.target.classList.add('genre-exclude');
+            e.target.textContent = '- ' + genre;
+        }
+    }
+});
+
+// Form submission
+document.getElementById('searchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Show loading
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('resultsTable').innerHTML = '';
+
+    // Gather form data
+    const formData = new FormData(this);
+    const filters = {};
+
+    for (let [key, value] of formData.entries()) {
+        if (value) filters[key] = value;
+    }
+
+    // Add genres (include and exclude)
+    const genresInclude = [];
+    const genresExclude = [];
+
+    for (let [genre, state] of genreStates) {
+        if (state === GENRE_INCLUDE) {
+            genresInclude.push(genre);
+        } else if (state === GENRE_EXCLUDE) {
+            genresExclude.push(genre);
+        }
+    }
+
+    if (genresInclude.length > 0) {
+        filters.genres_include = genresInclude;
+    }
+    if (genresExclude.length > 0) {
+        filters.genres_exclude = genresExclude;
+    }
+
+    // Convert votes index to actual value
+    if (filters.votes_min) {
+        filters.votes_min = voteThresholds[parseInt(filters.votes_min)];
+    }
+
+    try {
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(filters)
+        });
+
+        const data = await response.json();
+
+        // Hide loading
+        document.getElementById('loadingSpinner').style.display = 'none';
+
+        if (data.success) {
+            displayResults(data.movies, data.count);
+        } else {
+            document.getElementById('resultsTable').innerHTML =
+                `<div class="error">Error: ${data.error}</div>`;
+        }
+    } catch (error) {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('resultsTable').innerHTML =
+            `<div class="error">Network error: ${error.message}</div>`;
+    }
+});
+
+function displayResults(movies, count) {
+    document.getElementById('resultsCount').textContent =
+        `Found ${count} movie${count !== 1 ? 's' : ''}`;
+
+    if (movies.length === 0) {
+        document.getElementById('resultsTable').innerHTML =
+            '<p class="no-results">No movies found matching your criteria.</p>';
+        return;
+    }
+
+    let html = '<table class="movie-table"><thead><tr>';
+    html += '<th>Title</th><th>Year</th><th>Rating</th><th>Votes</th>';
+    html += '<th>Duration</th><th>Genres</th><th>Directors</th></tr></thead><tbody>';
+
+    movies.forEach(movie => {
+        html += '<tr>';
+        html += `<td><a href="/movie/${movie.imdb_id}">${escapeHtml(movie.title)}</a></td>`;
+        html += `<td>${movie.year}</td>`;
+        html += `<td>⭐ ${movie.rating.toFixed(1)}</td>`;
+        html += `<td>${movie.votes.toLocaleString()}</td>`;
+        html += `<td>${movie.duration_text}</td>`;
+        html += `<td>${movie.genres ? escapeHtml(movie.genres.replace(/\|/g, ', ')) : ''}</td>`;
+        html += `<td>${movie.directors ? escapeHtml(movie.directors) : ''}</td>`;
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('resultsTable').innerHTML = html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function resetForm() {
+    document.getElementById('searchForm').reset();
+    genreStates.clear();
+    document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.classList.remove('genre-include', 'genre-exclude');
+        btn.textContent = btn.dataset.genre; // Reset to genre name only
+    });
+    document.getElementById('resultsSection').style.display = 'none';
+    updateVotesLabel(0);
+}
+
+// Initialize
+updateVotesLabel(0);
+</script>
+{% endblock %}

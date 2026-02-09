@@ -1,0 +1,13 @@
+# Render.com deployment configuration
+# This file tells Render how to deploy your Flask app
+
+services:
+  - type: web
+    name: imdb-movie-browser
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

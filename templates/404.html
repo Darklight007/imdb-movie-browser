@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Page Not Found{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>404</h1>
+    <h2>Page Not Found</h2>
+    <p>The page you're looking for doesn't exist.</p>
+    <a href="/" class="btn btn-primary">← Go Home</a>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.error-page h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.error-page p {
+    color: #666;
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}

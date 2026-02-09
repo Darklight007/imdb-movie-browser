@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}IMDB Movie Browser{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">🎬 IMDB Movie Browser</a>
+                </div>
+                <div class="nav-links">
+                    <a href="/">Search</a>
+                    <a href="/about">About</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Information courtesy of <a href="https://www.imdb.com" target="_blank">IMDb</a>. Used with permission.</p>
+            <p>This is a non-commercial educational project. Data from <a href="https://developer.imdb.com/non-commercial-datasets/" target="_blank">IMDB Datasets</a>.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

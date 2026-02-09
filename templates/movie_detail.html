@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} ({{ movie.year }}) - IMDB Movie Browser{% endblock %}
+
+{% block content %}
+<div class="movie-detail">
+    <div class="movie-header">
+        <h1>{{ movie.title }}</h1>
+        {% if movie.original_title and movie.original_title != movie.title %}
+        <p class="original-title">Original Title: {{ movie.original_title }}</p>
+        {% endif %}
+    </div>
+
+    <div class="movie-info-grid">
+        <div class="info-card">
+            <h3>⭐ Rating</h3>
+            <p class="rating">{{ "%.1f"|format(movie.rating) }} / 10</p>
+            <p class="votes">{{ "{:,}".format(movie.votes) }} votes</p>
+        </div>
+
+        <div class="info-card">
+            <h3>📅 Year</h3>
+            <p>{{ movie.year }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>⏱️ Duration</h3>
+            <p>{{ movie.duration_text }}</p>
+        </div>
+
+        {% if movie.language_name %}
+        <div class="info-card">
+            <h3>🗣️ Language</h3>
+            <p>{{ movie.language_name }}</p>
+        </div>
+        {% endif %}
+
+        {% if movie.country_name %}
+        <div class="info-card">
+            <h3>🌍 Country</h3>
+            <p>{{ movie.country_name }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if movie.genres_list %}
+    <div class="detail-section">
+        <h3>🎭 Genres</h3>
+        <div class="genre-tags">
+            {% for genre in movie.genres_list %}
+            <span class="genre-tag">{{ genre }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if movie.directors %}
+    <div class="detail-section">
+        <h3>🎬 Directors</h3>
+        <p>{{ movie.directors }}</p>
+    </div>
+    {% endif %}
+
+    {% if movie.writers %}
+    <div class="detail-section">
+        <h3>✍️ Writers</h3>
+        <p>{{ movie.writers }}</p>
+    </div>
+    {% endif %}
+
+    {% if movie.cast %}
+    <div class="detail-section">
+        <h3>🎭 Cast</h3>
+        <p>{{ movie.cast }}</p>
+    </div>
+    {% endif %}
+
+    <div class="detail-actions">
+        <a href="/" class="btn btn-secondary">← Back to Search</a>
+        <a href="https://www.imdb.com/title/{{ movie.imdb_id }}" target="_blank" class="btn btn-primary">View on IMDB →</a>
+    </div>
+</div>
+
+<style>
+.movie-detail {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.movie-header {
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.movie-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.original-title {
+    color: #666;
+    font-style: italic;
+}
+
+.movie-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.info-card h3 {
+    margin-bottom: 0.5rem;
+    color: var(--secondary-color);
+}
+
+.rating {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.votes {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.detail-section {
+    margin: 2rem 0;
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-section h3 {
+    margin-bottom: 1rem;
+}
+
+.genre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.genre-tag {
+    background: var(--primary-color);
+    color: var(--secondary-color);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .movie-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .detail-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

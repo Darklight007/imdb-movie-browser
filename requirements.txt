@@ -1,0 +1,12 @@
+# IMDB Movie Browser - Python Dependencies
+
+# Web Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# WSGI Server for production
+gunicorn==21.2.0
+
+# No other dependencies needed!
+# SQLite is built into Python
+# All frontend code is vanilla JavaScript
