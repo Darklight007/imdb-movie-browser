@@ -6,6 +6,10 @@ A free, fast, and beautiful web application for searching and exploring movies f
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Flask](https://img.shields.io/badge/flask-3.0-green)
 
+**Created by Homayoun Jamshidi** | [GitHub](https://github.com/Darklight007)
+
+> This project was designed and directed by Homayoun Jamshidi. All features, user experience, and functionality decisions were conceived by the creator. Implementation assisted by Claude Code.
+
 ## ✨ Features
 
 - 🔍 **Advanced Search** - Filter by title, director, cast, year, rating, votes
