@@ -56,7 +56,8 @@
             <div class="form-group">
                 <label for="cast">Cast:</label>
                 <input type="text" id="cast" name="cast"
-                       placeholder="e.g., Tom Hanks" class="form-control">
+                       placeholder="e.g., Tom Hanks, *Sara, Sar* or -Brad Pitt" class="form-control"
+                       title="Comma-separated names. Use * wildcard (e.g. *Sara or Sar*). Use - to exclude (e.g. -Brad Pitt).">
             </div>
         </div>
 
@@ -116,7 +117,9 @@
             <div class="genre-mode">
                 <label><input type="radio" name="genre_mode" value="OR" checked> Match ANY</label>
                 <label><input type="radio" name="genre_mode" value="AND"> Match ALL</label>
+                <label><input type="radio" name="genre_mode" value="ONLY"> Match ONLY</label>
             </div>
+            <small class="hint">ONLY = movies with exactly these genres, nothing else</small>
         </div>
 
         <!-- Sorting -->
@@ -227,17 +230,15 @@ document.getElementById('genreButtons').addEventListener('click', function(e) {
     }
 });
 
-// Form submission
-document.getElementById('searchForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
+// Main search function - called by form submit and column sort clicks
+async function doSearch() {
     // Show loading
     document.getElementById('loadingSpinner').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'block';
     document.getElementById('resultsTable').innerHTML = '';
 
     // Gather form data
-    const formData = new FormData(this);
+    const formData = new FormData(document.getElementById('searchForm'));
     const filters = {};
 
     for (let [key, value] of formData.entries()) {
@@ -268,6 +269,10 @@ document.getElementById('searchForm').addEventListener('submit', async function(
         filters.votes_min = voteThresholds[parseInt(filters.votes_min)];
     }
 
+    // Always use current sort state (updated by column clicks or form dropdowns)
+    filters.sort_by = currentSortCol;
+    filters.sort_order = currentSortOrder;
+
     try {
         const response = await fetch('/api/search', {
             method: 'POST',
@@ -293,9 +298,38 @@ document.getElementById('searchForm').addEventListener('submit', async function(
         document.getElementById('resultsTable').innerHTML =
             `<div class="error">Network error: ${error.message}</div>`;
     }
+}
+
+// Form submission
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Sync sort state from form dropdowns before searching
+    currentSortCol = document.getElementById('sort_by').value;
+    currentSortOrder = document.getElementById('sort_order').value;
+    doSearch();
 });
 
+// Sort state
+let currentSortCol = 'rating';
+let currentSortOrder = 'DESC';
+let lastMovies = [];
+
+// Column definitions: [display label, sort key (null = not sortable)]
+const TABLE_COLUMNS = [
+    { label: 'Title',     key: 'title' },
+    { label: 'Year',      key: 'year' },
+    { label: 'Rating',    key: 'rating' },
+    { label: 'Votes',     key: 'votes' },
+    { label: 'Duration',  key: 'duration' },
+    { label: 'Country',   key: null },
+    { label: 'Genres',    key: null },
+    { label: 'Directors', key: null },
+    { label: 'Writers',   key: null },
+    { label: 'Cast',      key: null },
+];
+
 function displayResults(movies, count) {
+    lastMovies = movies;
     document.getElementById('resultsCount').textContent =
         `Found ${count} movie${count !== 1 ? 's' : ''}`;
 
@@ -305,9 +339,26 @@ function displayResults(movies, count) {
         return;
     }
 
-    let html = '<table class="movie-table"><thead><tr>';
-    html += '<th>Title</th><th>Year</th><th>Rating</th><th>Votes</th>';
-    html += '<th>Duration</th><th>Genres</th><th>Directors</th></tr></thead><tbody>';
+    renderTable(movies);
+}
+
+function renderTable(movies) {
+    // Build sortable header
+    let html = '<table class="movie-table" id="resultsMovieTable"><thead><tr>';
+    TABLE_COLUMNS.forEach(col => {
+        if (col.key) {
+            let arrow = '';
+            if (col.key === currentSortCol) {
+                arrow = currentSortOrder === 'DESC' ? ' ▼' : ' ▲';
+            } else {
+                arrow = ' ↕';
+            }
+            html += `<th class="sortable-col ${col.key === currentSortCol ? 'sorted' : ''}" data-key="${col.key}">${col.label}${arrow}</th>`;
+        } else {
+            html += `<th>${col.label}</th>`;
+        }
+    });
+    html += '</tr></thead><tbody>';
 
     movies.forEach(movie => {
         html += '<tr>';
@@ -315,14 +366,35 @@ function displayResults(movies, count) {
         html += `<td>${movie.year}</td>`;
         html += `<td>⭐ ${movie.rating.toFixed(1)}</td>`;
         html += `<td>${movie.votes.toLocaleString()}</td>`;
-        html += `<td>${movie.duration_text}</td>`;
+        html += `<td>${movie.duration_text || ''}</td>`;
+        html += `<td>${movie.country_name ? escapeHtml(movie.country_name) : ''}</td>`;
         html += `<td>${movie.genres ? escapeHtml(movie.genres.replace(/\|/g, ', ')) : ''}</td>`;
         html += `<td>${movie.directors ? escapeHtml(movie.directors) : ''}</td>`;
+        html += `<td>${movie.writers ? escapeHtml(movie.writers) : ''}</td>`;
+        html += `<td>${movie.cast ? escapeHtml(movie.cast) : ''}</td>`;
         html += '</tr>';
     });
 
     html += '</tbody></table>';
-    document.getElementById('resultsTable').innerHTML = html;
+    document.getElementById('resultsTable').innerHTML = '<div class="table-wrapper">' + html + '</div>';
+
+    // Attach sort click handlers
+    document.querySelectorAll('.sortable-col').forEach(th => {
+        th.addEventListener('click', function () {
+            const key = this.dataset.key;
+            if (key === currentSortCol) {
+                currentSortOrder = currentSortOrder === 'DESC' ? 'ASC' : 'DESC';
+            } else {
+                currentSortCol = key;
+                currentSortOrder = 'DESC';
+            }
+            // Update sort dropdowns to match
+            document.getElementById('sort_by').value = key;
+            document.getElementById('sort_order').value = currentSortOrder;
+            // Re-run search with new sort
+            doSearch();
+        });
+    });
 }
 
 function escapeHtml(text) {

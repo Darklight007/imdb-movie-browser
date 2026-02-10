@@ -391,6 +391,37 @@ select.form-control {
     text-decoration: underline;
 }
 
+/* Table scroll wrapper */
+.table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 4px;
+}
+
+/* Sortable / resizable column headers */
+.movie-table th {
+    position: relative;
+    white-space: nowrap;
+    min-width: 50px;
+    resize: horizontal;
+    overflow: hidden;
+}
+
+.sortable-col {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sortable-col:hover {
+    background: #2a2a2a;
+}
+
+.sortable-col.sorted {
+    background: #1a1a1a;
+    color: var(--primary-color);
+}
+
 .no-results {
     text-align: center;
     padding: 3rem;

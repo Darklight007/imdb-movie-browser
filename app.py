@@ -235,7 +235,8 @@ def build_query(filters: Dict) -> Tuple[str, List]:
 
     # Include genres
     if genres_include:
-        if genre_mode == 'AND':
+        if genre_mode in ('AND', 'ONLY'):
+            # All selected genres must be present (ONLY also post-filters in api_search)
             for g in genres_include:
                 query += " AND genres LIKE ?"
                 params.append(f"%{g}%")
@@ -250,17 +251,40 @@ def build_query(filters: Dict) -> Tuple[str, List]:
             query += " AND genres NOT LIKE ?"
             params.append(f"%{g}%")
 
-    # Director search
+    # Director search - supports wildcards (*), comma-separated names, minus (-) exclude
     director = filters.get('director', '').strip()
     if director:
-        query += " AND directors LIKE ?"
-        params.append(f"%{director}%")
+        for term in [t.strip() for t in director.split(',') if t.strip()]:
+            if term.startswith('-'):
+                name_sql = term[1:].strip().replace('*', '%')
+                if '%' not in name_sql:
+                    name_sql = f'%{name_sql}%'
+                query += " AND directors NOT LIKE ?"
+                params.append(name_sql)
+            else:
+                name_sql = term.replace('*', '%')
+                if '%' not in name_sql:
+                    name_sql = f'%{name_sql}%'
+                query += " AND directors LIKE ?"
+                params.append(name_sql)
 
-    # Cast search
+    # Cast search - supports wildcards (*), comma-separated names, minus (-) exclude
+    # e.g.: "Tom Hanks, *Sara, Sar*, -Brad Pitt"
     cast = filters.get('cast', '').strip()
     if cast:
-        query += ' AND "cast" LIKE ?'
-        params.append(f"%{cast}%")
+        for term in [t.strip() for t in cast.split(',') if t.strip()]:
+            if term.startswith('-'):
+                name_sql = term[1:].strip().replace('*', '%')
+                if '%' not in name_sql:
+                    name_sql = f'%{name_sql}%'
+                query += ' AND "cast" NOT LIKE ?'
+                params.append(name_sql)
+            else:
+                name_sql = term.replace('*', '%')
+                if '%' not in name_sql:
+                    name_sql = f'%{name_sql}%'
+                query += ' AND "cast" LIKE ?'
+                params.append(name_sql)
 
     # Language filter
     if has_language:
@@ -367,6 +391,18 @@ def api_search():
             movies.append(movie)
 
         conn.close()
+
+        # Post-filter for ONLY genre mode: movies must have EXACTLY the selected genres
+        genre_mode = filters.get('genre_mode', 'OR')
+        genres_include = filters.get('genres_include', [])
+        if isinstance(genres_include, str):
+            genres_include = [genres_include]
+        if genre_mode == 'ONLY' and genres_include:
+            target = set(genres_include)
+            movies = [
+                m for m in movies
+                if set(g for g in (m.get('genres') or '').split('|') if g) == target
+            ]
 
         return jsonify({
             'success': True,
