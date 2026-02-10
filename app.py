@@ -177,13 +177,13 @@ def build_query(filters: Dict) -> Tuple[str, List]:
     conn.close()
 
     # Build SELECT statement
-    base_cols = 'imdb_id, title, year, rating, votes, duration_text'
+    base_cols = 'imdb_id, title, year, rating, votes, duration_mins, duration_text'
     optional_cols = []
     if has_language:
         optional_cols.append('language')
     if has_country:
         optional_cols.append('country')
-    optional_cols.extend(['genres', 'directors', '"cast"'])
+    optional_cols.extend(['genres', 'directors', 'writers', '"cast"'])
 
     query = f'SELECT {base_cols}, {", ".join(optional_cols)} FROM movies WHERE 1=1'
     params = []

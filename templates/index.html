@@ -378,7 +378,7 @@ function renderTable(movies) {
     html += '</tbody></table>';
     document.getElementById('resultsTable').innerHTML = '<div class="table-wrapper">' + html + '</div>';
 
-    // Attach sort click handlers
+    // Attach sort click handlers - sort in-memory, no new API call
     document.querySelectorAll('.sortable-col').forEach(th => {
         th.addEventListener('click', function () {
             const key = this.dataset.key;
@@ -388,13 +388,36 @@ function renderTable(movies) {
                 currentSortCol = key;
                 currentSortOrder = 'DESC';
             }
-            // Update sort dropdowns to match
-            document.getElementById('sort_by').value = key;
+            // Keep dropdowns in sync
+            const sortSel = document.getElementById('sort_by');
+            if ([...sortSel.options].some(o => o.value === key)) sortSel.value = key;
             document.getElementById('sort_order').value = currentSortOrder;
-            // Re-run search with new sort
-            doSearch();
+            sortAndRender();
         });
     });
+}
+
+// Sort the already-fetched results in-memory and redraw (count stays the same)
+function sortAndRender() {
+    if (!lastMovies.length) return;
+    // Map column key to the actual field name in the movie object
+    const fieldMap = { duration: 'duration_mins' };
+    const field = fieldMap[currentSortCol] || currentSortCol;
+
+    const sorted = [...lastMovies].sort((a, b) => {
+        let va = a[field];
+        let vb = b[field];
+        // Push nulls to bottom regardless of sort direction
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        if (typeof va === 'string') {
+            const cmp = va.localeCompare(vb, undefined, { sensitivity: 'base' });
+            return currentSortOrder === 'DESC' ? -cmp : cmp;
+        }
+        return currentSortOrder === 'DESC' ? vb - va : va - vb;
+    });
+    renderTable(sorted);
 }
 
 function escapeHtml(text) {
@@ -408,13 +431,39 @@ function resetForm() {
     genreStates.clear();
     document.querySelectorAll('.genre-btn').forEach(btn => {
         btn.classList.remove('genre-include', 'genre-exclude');
-        btn.textContent = btn.dataset.genre; // Reset to genre name only
+        btn.textContent = btn.dataset.genre;
     });
     document.getElementById('resultsSection').style.display = 'none';
-    updateVotesLabel(0);
+    // The 'reset' event listener above handles clearing has-value and votesLabel
 }
 
 // Initialize
 updateVotesLabel(0);
+
+// ---- Field highlight: yellow when filled, darker yellow on hover/focus ----
+function updateFieldHighlight(el) {
+    if (el.tagName === 'SELECT') {
+        el.classList.toggle('has-value', el.value !== '');
+    } else if (el.type === 'range') {
+        el.classList.toggle('has-value', parseInt(el.value) > 0);
+    }
+    // text/number inputs are handled by CSS :not(:placeholder-shown)
+}
+
+document.querySelectorAll('#searchForm .form-control').forEach(el => {
+    updateFieldHighlight(el);
+    el.addEventListener('input',  () => updateFieldHighlight(el));
+    el.addEventListener('change', () => updateFieldHighlight(el));
+});
+
+// Also clear has-value on full form reset
+document.getElementById('searchForm').addEventListener('reset', function() {
+    setTimeout(() => {
+        document.querySelectorAll('#searchForm .form-control').forEach(el => {
+            el.classList.remove('has-value');
+        });
+        updateVotesLabel(0);
+    }, 0);
+});
 </script>
 {% endblock %}

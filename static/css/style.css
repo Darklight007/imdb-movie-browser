@@ -33,7 +33,7 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: min(1800px, 96%);
     margin: 0 auto;
     padding: 0 20px;
 }
@@ -150,9 +150,26 @@ body {
     transition: border-color 0.3s;
 }
 
+/* Yellow bg when any input/select has a value */
+input.form-control:not(:placeholder-shown) {
+    background-color: #fffde7;
+}
+
+/* .has-value applied by JS to selects and range slider */
+.form-control.has-value {
+    background-color: #fffde7;
+}
+
+/* Darker yellow on hover */
+.form-control:hover {
+    background-color: #fff3cd;
+    border-color: #f5c518;
+}
+
 .form-control:focus {
     outline: none;
     border-color: var(--primary-color);
+    background-color: #ffe082;
 }
 
 select.form-control {
