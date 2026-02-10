@@ -90,6 +90,18 @@
         </div>
         {% endif %}
 
+        <!-- Adult Content Filter -->
+        {% if has_isadult %}
+        <div class="form-group">
+            <label>Adult Content:</label>
+            <div class="adult-filter">
+                <label><input type="radio" name="adult" value="not_adult" checked> Not Adult</label>
+                <label><input type="radio" name="adult" value="any"> Any</label>
+                <label><input type="radio" name="adult" value="adult_only"> Adult Only</label>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Votes Slider -->
         <div class="form-group">
             <label for="votes_min">Minimum Votes: <span id="votesLabel">0</span></label>
@@ -318,6 +330,7 @@ let lastMovies = [];
 const TABLE_COLUMNS = [
     { label: 'Title',     key: 'title' },
     { label: 'Year',      key: 'year' },
+    { label: 'Adult',     key: null },
     { label: 'Rating',    key: 'rating' },
     { label: 'Votes',     key: 'votes' },
     { label: 'Duration',  key: 'duration' },
@@ -364,6 +377,9 @@ function renderTable(movies) {
         html += '<tr>';
         html += `<td><a href="/movie/${movie.imdb_id}">${escapeHtml(movie.title)}</a></td>`;
         html += `<td>${movie.year}</td>`;
+        html += movie.isAdult
+            ? `<td class="adult-yes">Y</td>`
+            : `<td class="adult-no">N</td>`;
         html += `<td>⭐ ${movie.rating.toFixed(1)}</td>`;
         html += `<td>${movie.votes.toLocaleString()}</td>`;
         html += `<td>${movie.duration_text || ''}</td>`;

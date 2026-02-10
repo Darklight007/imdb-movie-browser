@@ -132,6 +132,12 @@ def get_database_stats() -> Dict:
         stats['countries'] = []
         stats['has_country'] = False
 
+    try:
+        cur.execute("SELECT isAdult FROM movies LIMIT 1")
+        stats['has_isadult'] = True
+    except sqlite3.OperationalError:
+        stats['has_isadult'] = False
+
     # Year range
     cur.execute("SELECT MIN(year), MAX(year) FROM movies")
     min_year, max_year = cur.fetchone()
@@ -174,6 +180,13 @@ def build_query(filters: Dict) -> Tuple[str, List]:
     except sqlite3.OperationalError:
         pass
 
+    has_isadult = False
+    try:
+        cur.execute("SELECT isAdult FROM movies LIMIT 1")
+        has_isadult = True
+    except sqlite3.OperationalError:
+        pass
+
     conn.close()
 
     # Build SELECT statement
@@ -184,6 +197,8 @@ def build_query(filters: Dict) -> Tuple[str, List]:
     if has_country:
         optional_cols.append('country')
     optional_cols.extend(['genres', 'directors', 'writers', '"cast"'])
+    if has_isadult:
+        optional_cols.append('isAdult')
 
     query = f'SELECT {base_cols}, {", ".join(optional_cols)} FROM movies WHERE 1=1'
     params = []
@@ -299,6 +314,15 @@ def build_query(filters: Dict) -> Tuple[str, List]:
         if country and country != '(All)':
             query += " AND country = ?"
             params.append(country)
+
+    # Adult content filter (only applies when isAdult column exists)
+    if has_isadult:
+        adult = filters.get('adult', 'not_adult')
+        if adult == 'not_adult':
+            query += " AND isAdult = 0"
+        elif adult == 'adult_only':
+            query += " AND isAdult = 1"
+        # 'any' → no filter
 
     # Sorting
     sort_by = filters.get('sort_by', 'rating')

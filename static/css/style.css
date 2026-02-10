@@ -272,6 +272,32 @@ select.form-control {
     gap: 1.5rem;
 }
 
+/* Adult content filter */
+.adult-filter {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.adult-filter label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+/* Adult Y/N badges in results table */
+td.adult-yes {
+    color: #c62828;
+    font-weight: 700;
+    text-align: center;
+}
+
+td.adult-no {
+    color: #888;
+    text-align: center;
+}
+
 .genre-mode label {
     display: flex;
     align-items: center;
