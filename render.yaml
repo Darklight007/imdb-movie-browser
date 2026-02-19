@@ -5,8 +5,8 @@ services:
   - type: web
     name: imdb-movie-browser
     env: python
-    buildCommand: "pip install -r requirements.txt && python3 download_imdb_data_auto.py && python3 convert_to_sqlite.py"
-    startCommand: "gunicorn app:app --timeout 120"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "bash start.sh"
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
