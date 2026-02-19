@@ -37,8 +37,22 @@
             <strong>Information courtesy of <a href="https://www.imdb.com" target="_blank">IMDb</a>. Used with permission.</strong>
         </p>
         <p>
-            All movie data comes from IMDB's Non-Commercial Datasets, which are updated regularly.
-            This includes information about titles, ratings, cast, crew, and more.
+            All movie data comes from <a href="https://developer.imdb.com/non-commercial-datasets/" target="_blank">IMDB's Non-Commercial Datasets</a>,
+            a set of publicly available TSV files that IMDB publishes and updates daily.
+            The following six dataset files are downloaded and merged to build the local database:
+        </p>
+        <ul>
+            <li><strong>title.basics</strong> — title, original title, release year, runtime, genres, and adult flag</li>
+            <li><strong>title.ratings</strong> — IMDB rating and number of votes per title</li>
+            <li><strong>title.crew</strong> — director and writer IDs for each title</li>
+            <li><strong>title.principals</strong> — top-billed cast members per title</li>
+            <li><strong>name.basics</strong> — person names (used to resolve director, writer, and cast IDs to names)</li>
+            <li><strong>title.akas</strong> — alternative titles with language and country information</li>
+        </ul>
+        <p>
+            Only feature-length movies that have at least one rating are included.
+            The database is refreshed periodically by re-downloading all six files and rebuilding
+            the local SQLite database, so ratings, vote counts, and newly added titles stay up to date.
         </p>
     </section>
 

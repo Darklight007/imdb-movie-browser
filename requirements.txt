@@ -7,6 +7,9 @@ Werkzeug==3.0.1
 # WSGI Server for production
 gunicorn==21.2.0
 
+# Scheduler for daily auto-updates
+APScheduler==3.10.4
+
 # No other dependencies needed!
 # SQLite is built into Python
 # All frontend code is vanilla JavaScript

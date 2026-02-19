@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Admin – IMDB Movie Browser{% endblock %}
+
+{% block extra_css %}
+<style>
+  .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+  @media (max-width: 700px) { .admin-grid { grid-template-columns: 1fr; } }
+
+  .admin-card {
+    background: #1e1e2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+  }
+  .admin-card h2 { margin-top: 0; font-size: 1.1rem; color: #f0b429; }
+  .admin-card p  { margin: 0.3rem 0; font-size: 0.9rem; color: #ccc; }
+  .admin-card .label { color: #888; font-size: 0.8rem; text-transform: uppercase; }
+  .admin-card .value { font-size: 1.1rem; font-weight: 600; color: #fff; }
+
+  .btn-update {
+    margin-top: 1rem;
+    padding: 0.6rem 1.4rem;
+    background: #f0b429;
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-update:hover:not(:disabled) { background: #e09c10; }
+  .btn-update:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #progress-container { margin-top: 1.2rem; }
+  #progress-log {
+    background: #111;
+    color: #a0e0a0;
+    font-family: monospace;
+    font-size: 0.8rem;
+    padding: 0.8rem;
+    border-radius: 6px;
+    height: 260px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    border: 1px solid #333;
+  }
+  #progress-status {
+    margin-top: 0.6rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .status-ok   { color: #4caf50; }
+  .status-fail { color: #f44336; }
+
+  .schedule-info { font-size: 0.85rem; color: #aaa; margin-top: 0.5rem; }
+  code { background: #333; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom:0.3rem;">Admin Panel</h1>
+<p style="color:#888;margin-top:0;">Dataset management for IMDB Movie Browser</p>
+
+<div class="admin-grid">
+
+  <!-- Database status -->
+  <div class="admin-card">
+    <h2>Database Status</h2>
+    <p><span class="label">Movies</span><br><span class="value">{{ movie_count }}</span></p>
+    <p style="margin-top:0.8rem;"><span class="label">Last file update</span><br><span class="value">{{ db_date }}</span></p>
+    {% if update_status.last_run %}
+    <p style="margin-top:0.8rem;">
+      <span class="label">Last update run</span><br>
+      <span class="value">{{ update_status.last_run }}</span>
+      <span style="color:{% if update_status.last_result == 'success' %}#4caf50{% else %}#f44336{% endif %};">
+        ({{ update_status.last_result }})
+      </span>
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- Auto-schedule info -->
+  <div class="admin-card">
+    <h2>Auto-Update Schedule</h2>
+    <p>The database refreshes automatically every night at <strong>3:00 AM</strong>.</p>
+    <p class="schedule-info">
+      Change the hour by setting the <code>UPDATE_HOUR</code> environment variable
+      (0–23) before starting the app.
+    </p>
+    {% if update_status.running %}
+    <p style="margin-top:1rem;color:#f0b429;font-weight:600;">
+      ⟳ An update is currently running…
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- Manual update (full-width) -->
+  <div class="admin-card" style="grid-column: 1 / -1;">
+    <h2>Manual Update</h2>
+    <p>Downloads the latest IMDB datasets (~825 MB) and rebuilds the database. Takes 5–10 minutes.</p>
+
+    <button id="update-btn" class="btn-update"
+            onclick="startUpdate()"
+            {% if update_status.running %}disabled{% endif %}>
+      Update Dataset Now
+    </button>
+
+    <div id="progress-container" style="display:none;">
+      <div id="progress-log"></div>
+      <div id="progress-status"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startUpdate() {
+  if (!confirm('Download ~825 MB of IMDB data and rebuild the database?\nThis takes 5–10 minutes.')) return;
+
+  const btn       = document.getElementById('update-btn');
+  const container = document.getElementById('progress-container');
+  const log       = document.getElementById('progress-log');
+  const status    = document.getElementById('progress-status');
+
+  btn.disabled    = true;
+  btn.textContent = 'Updating…';
+  container.style.display = 'block';
+  log.textContent = '';
+  status.textContent = '';
+  status.className = '';
+
+  const src = new EventSource('/admin/update/stream');
+
+  src.onmessage = function(e) {
+    const line = e.data;
+    if (line === 'DONE') {
+      src.close();
+      status.textContent = '✓ Update complete! Reload the page to see the new movie count.';
+      status.className = 'status-ok';
+      btn.disabled = false;
+      btn.textContent = 'Update Dataset Now';
+    } else if (line === 'FAILED') {
+      src.close();
+      status.textContent = '✗ Update failed. Check the log above for details.';
+      status.className = 'status-fail';
+      btn.disabled = false;
+      btn.textContent = 'Update Dataset Now';
+    } else {
+      log.textContent += line + '\n';
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+
+  src.onerror = function() {
+    src.close();
+    status.textContent = '✗ Connection lost. The update may still be running in the background.';
+    status.className = 'status-fail';
+    btn.disabled = false;
+    btn.textContent = 'Update Dataset Now';
+  };
+}
+</script>
+{% endblock %}

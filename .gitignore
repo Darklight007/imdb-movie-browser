@@ -40,6 +40,11 @@ instance/
 # Database (don't commit the actual database)
 *.sqlite
 *.sqlite3
+*.db
+
+# Raw IMDB dataset files (large, downloaded at runtime)
+*.tsv.gz
+*.tsv
 
 # Environment variables
 .env

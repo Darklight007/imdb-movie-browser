@@ -21,21 +21,28 @@ TO ADD NEW FEATURES:
 4. Update static/css/style.css for styling
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 import sqlite3
 import os
+import subprocess
+import threading
+import datetime
 from typing import Dict, List, Tuple
 
 app = Flask(__name__)
 
 # Configuration
-# Check if database is in same directory (production) or parent directory (development)
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'imdb_dataset.db')
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.path.join(SCRIPTS_DIR, 'imdb_dataset.db')
 if not os.path.exists(DATABASE_PATH):
-    # Try parent directory (for local development)
-    DATABASE_PATH = os.path.join(os.path.dirname(__file__), '..', 'imdb_dataset.db')
+    # Fallback: parent directory (legacy layout)
+    DATABASE_PATH = os.path.join(SCRIPTS_DIR, '..', 'imdb_dataset.db')
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max request size
+
+# Dataset update state
+_update_lock = threading.Lock()
+_update_status: Dict = {'running': False, 'last_run': None, 'last_result': None}
 
 # ============================================================================
 # Language and Country Code Mappings (same as GUI)
@@ -506,6 +513,151 @@ def movie_detail(imdb_id):
 def about():
     """About page with IMDB attribution"""
     return render_template('about.html')
+
+# ============================================================================
+# Admin Routes
+# ============================================================================
+
+@app.route('/admin')
+def admin():
+    """Admin page: shows database status and dataset update controls"""
+    try:
+        db_mtime = os.path.getmtime(DATABASE_PATH)
+        db_date = datetime.datetime.fromtimestamp(db_mtime).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        db_date = "unknown"
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM movies")
+        movie_count = cur.fetchone()[0]
+        conn.close()
+        movie_count_fmt = f"{movie_count:,}"
+    except Exception:
+        movie_count_fmt = "unknown"
+
+    return render_template(
+        'admin.html',
+        db_date=db_date,
+        movie_count=movie_count_fmt,
+        update_status=_update_status,
+    )
+
+
+@app.route('/admin/update/stream')
+def admin_update_stream():
+    """
+    SSE endpoint: triggers dataset update and streams progress line-by-line.
+    Opens an EventSource connection; sends 'DONE' or 'FAILED' as the final message.
+    """
+    if not _update_lock.acquire(blocking=False):
+        def already_running():
+            yield "data: An update is already in progress.\n\n"
+            yield "data: FAILED\n\n"
+        return Response(
+            stream_with_context(already_running()),
+            mimetype='text/event-stream',
+            headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
+        )
+
+    _update_status['running'] = True
+
+    def generate():
+        try:
+            download_script = os.path.join(SCRIPTS_DIR, 'download_imdb_data_auto.py')
+            convert_script = os.path.join(SCRIPTS_DIR, 'convert_to_sqlite.py')
+
+            # Step 1: download
+            yield "data: === Step 1/2: Downloading IMDB data ===\n\n"
+            proc = subprocess.Popen(
+                ['python3', '-u', download_script],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1, cwd=SCRIPTS_DIR,
+            )
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    yield f"data: {line}\n\n"
+            proc.wait()
+
+            if proc.returncode != 0:
+                yield "data: ERROR: Download failed.\n\n"
+                yield "data: FAILED\n\n"
+                return
+
+            # Step 2: convert
+            yield "data: \n\n"
+            yield "data: === Step 2/2: Building SQLite database ===\n\n"
+            proc2 = subprocess.Popen(
+                ['python3', '-u', convert_script],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1, cwd=SCRIPTS_DIR,
+            )
+            for line in proc2.stdout:
+                line = line.rstrip()
+                if line:
+                    yield f"data: {line}\n\n"
+            proc2.wait()
+
+            if proc2.returncode != 0:
+                yield "data: ERROR: Database conversion failed.\n\n"
+                yield "data: FAILED\n\n"
+                return
+
+            _update_status['last_run'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            _update_status['last_result'] = 'success'
+            yield "data: \n\n"
+            yield "data: Dataset updated successfully!\n\n"
+            yield "data: DONE\n\n"
+
+        except Exception as e:
+            yield f"data: Unexpected error: {e}\n\n"
+            yield "data: FAILED\n\n"
+        finally:
+            _update_status['running'] = False
+            _update_lock.release()
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
+    )
+
+
+def _run_scheduled_update():
+    """Background job: download + convert. Skips if already running."""
+    if not _update_lock.acquire(blocking=False):
+        return
+    _update_status['running'] = True
+    try:
+        for script in ['download_imdb_data_auto.py', 'convert_to_sqlite.py']:
+            result = subprocess.run(
+                ['python3', os.path.join(SCRIPTS_DIR, script)],
+                cwd=SCRIPTS_DIR,
+            )
+            if result.returncode != 0:
+                _update_status['last_result'] = 'failed'
+                return
+        _update_status['last_run'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        _update_status['last_result'] = 'success'
+    finally:
+        _update_status['running'] = False
+        _update_lock.release()
+
+
+# Start daily scheduler (skip in debug reloader subprocess)
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        import atexit
+        _scheduler = BackgroundScheduler()
+        _update_hour = int(os.environ.get('UPDATE_HOUR', '3'))
+        _scheduler.add_job(_run_scheduled_update, 'cron', hour=_update_hour, minute=0)
+        _scheduler.start()
+        atexit.register(lambda: _scheduler.shutdown())
+    except ImportError:
+        pass  # APScheduler not installed; scheduled updates disabled
 
 # ============================================================================
 # Error Handlers
