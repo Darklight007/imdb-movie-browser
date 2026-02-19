@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Database Loading - IMDB Movie Browser{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>&#9200;</h1>
+    <h2>Database is being prepared</h2>
+    <p>The movie database is still being built. This usually takes a few minutes on first deploy.<br>Please check back shortly.</p>
+    <button onclick="window.location.reload()" class="btn btn-primary">Refresh</button>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    margin-bottom: 1rem;
+}
+
+.error-page h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.error-page p {
+    color: #666;
+    margin-bottom: 2rem;
+    line-height: 1.8;
+}
+</style>
+{% endblock %}

@@ -86,6 +86,11 @@ def get_db_connection():
     Create optimized SQLite connection
     Same optimizations as GUI version
     """
+    if not os.path.exists(DATABASE_PATH):
+        raise FileNotFoundError(
+            f"Database not found at {DATABASE_PATH}. "
+            "Run download_imdb_data_auto.py then convert_to_sqlite.py to generate it."
+        )
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
 
@@ -362,7 +367,10 @@ def index():
     """
     Homepage with search form
     """
-    stats = get_database_stats()
+    try:
+        stats = get_database_stats()
+    except FileNotFoundError:
+        return render_template('db_not_ready.html'), 503
     return render_template('index.html', **stats)
 
 @app.route('/api/search', methods=['GET', 'POST'])
